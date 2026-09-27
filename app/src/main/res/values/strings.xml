@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">ShieldMDM</string>
+    <string name="device_admin_label">ShieldMDM Enterprise Device Admin</string>
+    <string name="device_admin_description">Enforces enterprise policies including screenshot and screen recording blocking, 4-digit PIN, Pattern, and password security rules.</string>
+</resources>

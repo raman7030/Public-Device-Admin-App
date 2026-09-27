@@ -1,0 +1,6 @@
+{
+  "name": "ShieldMDM",
+  "description": "Enterprise Device Policy Manager for screen capture protection, password & PIN enforcement, and security compliance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
