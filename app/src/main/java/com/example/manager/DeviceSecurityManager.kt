@@ -46,13 +46,20 @@ class DeviceSecurityManager(private val context: Context) {
         }
     }
 
+    /** True only when Android has provisioned this app with organization-level ownership. */
+    fun isDeviceOwnerOrProfileOwner(): Boolean {
+        return try {
+            dpm.isDeviceOwnerApp(context.packageName) ||
+                dpm.isProfileOwnerApp(context.packageName)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun getScreenCaptureDisabled(): Boolean {
         return try {
-            if (isAdminActive()) {
+            isAdminActive() && isDeviceOwnerOrProfileOwner() &&
                 dpm.getScreenCaptureDisabled(adminComponent)
-            } else {
-                false
-            }
         } catch (e: Exception) {
             false
         }
@@ -61,10 +68,23 @@ class DeviceSecurityManager(private val context: Context) {
     fun setScreenCaptureDisabled(disabled: Boolean): Result<Boolean> {
         return try {
             if (!isAdminActive()) {
-                return Result.failure(IllegalStateException("Device Administrator privileges not active."))
+                return Result.failure(IllegalStateException("Activate Device Admin first in Android Settings."))
+            }
+            if (!isDeviceOwnerOrProfileOwner()) {
+                return Result.failure(IllegalStateException(
+                    "Ordinary Device Admin cannot control system-wide screenshots. Provision this app as Device Owner or Profile Owner on a managed device."
+                ))
             }
             dpm.setScreenCaptureDisabled(adminComponent, disabled)
-            Result.success(disabled)
+            val actual = dpm.getScreenCaptureDisabled(adminComponent)
+            if (actual != disabled) {
+                return Result.failure(IllegalStateException("Android did not confirm the requested screen-capture policy."))
+            }
+            Result.success(actual)
+        } catch (e: SecurityException) {
+            Result.failure(IllegalStateException(
+                "Android denied this policy. Device Owner/Profile Owner provisioning may be required: ${e.localizedMessage}", e
+            ))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -221,7 +241,7 @@ class DeviceSecurityManager(private val context: Context) {
             putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
             putExtra(
                 DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                "ShieldMDM requires Device Administrator privileges to manage screen recording/screenshot policies, lock the screen, and enforce PIN/password compliance for enterprise device protection."
+                "ShieldMDM uses Device Administrator for supported password policies and screen locking. System-wide screenshot controls require Device Owner or Profile Owner provisioning by Android. No policy is applied until Android grants and confirms it."
             )
         }
     }
